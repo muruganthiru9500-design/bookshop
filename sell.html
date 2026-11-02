@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><script src="https://cdn.tailwindcss.com"></script><title>Sell Book</title></head>
+<body class="bg-white p-6">
+<h1 class="text-2xl font-bold">Sell Your Old Book in 20 Sec</h1>
+<input id="name" placeholder="Book Name - Eg: DBMS by Navathe" class="w-full p-3 border-2 mt-4 rounded">
+<input id="mrp" placeholder="New Price - Eg: 600" class="w-full p-3 border-2 mt-2 rounded">
+<input id="price" placeholder="Your Selling Price - Eg: 150" class="w-full p-3 border-2 mt-2 rounded">
+<select id="branch" class="w-full p-3 border-2 mt-2 rounded"><option>B.Tech</option><option>BCA</option><option>MBA</option></select>
+<input id="phone" placeholder="WhatsApp No" class="w-full p-3 border-2 mt-2 rounded">
+<input id="image" type="file" accept="image/*" class="mt-2">
+<button onclick="sell()" class="w-full bg-yellow-400 p-3 mt-4 font-bold rounded-xl">SELL NOW - GO LIVE</button>
+<p id="msg"></p>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js";
+const firebaseConfig = { apiKey: "YOUR_API_KEY", authDomain: "YOUR_PROJECT.firebaseapp.com", projectId: "YOUR_PROJECT", storageBucket: "YOUR_PROJECT.appspot.com" };
+const app = initializeApp(firebaseConfig); const db=getFirestore(app); const storage=getStorage(app);
+window.sell = async ()=>{
+ const file=document.getElementById("image").files[0];
+ const storageRef=ref(storage, "books/"+Date.now()); await uploadBytes(storageRef,file);
+ const url=await getDownloadURL(storageRef);
+ await addDoc(collection(db,"books"),{name:document.getElementById("name").value,mrp:document.getElementById("mrp").value,price:document.getElementById("price").value,branch:document.getElementById("branch").value,phone:document.getElementById("phone").value,image:url,sem:"3rd Sem", created:Date.now()});
+ document.getElementById("msg").innerText="Book Live! Go to homepage";
+}
+</script>
+</body></html>
