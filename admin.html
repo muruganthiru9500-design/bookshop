@@ -1,56 +1,66 @@
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><script src="https://cdn.tailwindcss.com"></script><title>Admin - Kitab Bazaar</title></head>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width"><script src="https://cdn.tailwindcss.com"></script><title>Admin - Kitab Bazaar</title></head>
 <body class="bg-gray-900 text-white p-4 max-w-6xl mx-auto min-h-screen">
 <div class="flex justify-between items-center">
 <h1 class="text-3xl font-black">🔒 ADMIN PANEL</h1>
-<a href="index.html" class="bg-white text-black px-4 py-2 rounded-full font-bold">View Site</a>
+<a href="index.html" class="bg-white text-black px-4 py-2 rounded-full font-bold text-sm">View Site</a>
 </div>
-<p class="text-gray-400 text-sm mt-2">Project: book-shop-a1a26 | Total Books Below</p>
-<div id="books" class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6"><p>Loading...</p></div>
+<p class="text-gray-400 text-sm mt-2" id="count">Loading...</p>
+<div id="books" class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6"><p>Loading books...</p></div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-import { getFirestore, collection, getDocs, deleteDoc, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
-
-const firebaseConfig = { 
-  apiKey: "AIzaSyAAL7vg4zzI6VPePYgjfDMxNQPCMPiA2vo", 
-  authDomain: "book-shop-a1a26.firebaseapp.com", 
-  projectId: "book-shop-a1a26", 
-  storageBucket: "book-shop-a1a26.firebasestorage.app", 
-  messagingSenderId: "368942909095", 
-  appId: "1:368942909095:web:cea46dfbd6b36ebdb0fd82" 
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+<script>
+const PROJECT_ID = "book-shop-a1a26";
+const API_KEY = "AIzaSyAAL7vg4zzI6VPePYgjfDMxNQPCMPiA2vo";
 
 async function load(){
-  const q = query(collection(db, "books"), orderBy("createdAt","desc"));
-  const snap = await getDocs(q);
-  let html=""; let count=0;
-  snap.forEach(d=>{
-    count++;
-    const b=d.data();
-    html+=`
-    <div class="bg-white text-black p-4 rounded-2xl shadow-lg">
-      <img src="${b.image}" class="h-40 w-full object-cover rounded-xl">
-      <p class="font-black mt-2">${b.name}</p>
-      <p class="text-sm">MRP ₹${b.mrp} | Sell ₹${b.price}</p>
-      <p class="text-xs bg-gray-100 p-2 rounded mt-2">📱 ${b.phone}</p>
-      <div class="flex gap-2 mt-3">
-        <a href="https://wa.me/91${b.phone}" target="_blank" class="flex-1 bg-green-500 text-white text-center py-2 rounded-lg font-bold text-sm">WhatsApp</a>
-        <button onclick="del('${d.id}')" class="flex-1 bg-red-500 text-white py-2 rounded-lg font-bold text-sm">DELETE</button>
-      </div>
-    </div>`;
-  });
-  document.getElementById("books").innerHTML = html || "<p class='text-white'>No books yet</p>";
-  if(count>0) document.querySelector("p.text-gray-400").innerText = `Project: book-shop-a1a26 | Total Books: ${count}`;
+  const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/books?key=${API_KEY}&pageSize=100`;
+  try{
+    const res = await fetch(url);
+    const data = await res.json();
+    console.log(data);
+    let html = "";
+    let count = 0;
+    if(!data.documents){ document.getElementById("books").innerHTML="<p>No books yet</p>"; document.getElementById("count").innerText="Total: 0 books"; return; }
+    
+    data.documents.forEach(doc=>{
+      count++;
+      const f = doc.fields;
+      const b = {
+        name: f.name?.stringValue || "",
+        mrp: f.mrp?.stringValue || "0",
+        price: f.price?.stringValue || "0",
+        phone: f.phone?.stringValue || "",
+        image: f.image?.stringValue || ""
+      };
+      const docId = doc.name.split("/").pop(); // Extract ID
+
+      html+=`
+      <div class="bg-white text-black p-4 rounded-2xl shadow-lg">
+        <img src="${b.image}" class="h-40 w-full object-cover rounded-xl">
+        <p class="font-black mt-2 truncate">${b.name}</p>
+        <p class="text-sm text-gray-600">MRP ₹${b.mrp} | Sell ₹${b.price}</p>
+        <p class="text-xs bg-gray-100 p-2 rounded mt-2">📱 ${b.phone} <br> ID: ${docId.substring(0,8)}...</p>
+        <div class="flex gap-2 mt-3">
+          <a href="https://wa.me/91${b.phone}" target="_blank" class="flex-1 bg-green-500 text-white text-center py-2 rounded-lg font-bold text-sm">WhatsApp</a>
+          <button onclick="del('${docId}')" class="flex-1 bg-red-600 text-white py-2 rounded-lg font-bold text-sm">DELETE</button>
+        </div>
+      </div>`;
+    });
+    document.getElementById("books").innerHTML = html;
+    document.getElementById("count").innerText = `Project: ${PROJECT_ID} | Total Books: ${count} | Live ✅`;
+  }catch(e){
+    document.getElementById("books").innerHTML = `<p class="text-red-400">Error: ${e.message}</p>`;
+  }
 }
 
-window.del = async (id)=>{
-  if(!confirm("Delete this book permanently?")) return;
-  await deleteDoc(doc(db, "books", id));
-  alert("Deleted ✅"); load();
+async function del(id){
+  if(!confirm("Delete this book permanently? This cannot be undone.")) return;
+  const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/books/${id}?key=${API_KEY}`;
+  try{
+    await fetch(url, {method:"DELETE"});
+    alert("Deleted ✅");
+    load();
+  }catch(e){ alert("Delete failed: "+e.message); }
 }
 
 load();
