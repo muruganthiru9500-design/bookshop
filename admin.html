@@ -1,124 +1,58 @@
 <!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin - Kitab-Bazaar</title>
-<script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 min-h-screen">
-
-<!-- Login Screen -->
-<div id="loginScreen" class="flex items-center justify-center min-h-screen">
-<div class="bg-white p-8 rounded-2xl border-2 border-black w-96">
-<h1 class="text-2xl font-black">🔐 ADMIN LOGIN</h1>
-<p class="text-sm text-gray-500 mb-4">Only Owner Can Access</p>
-<input id="pass" type="password" placeholder="Enter Admin Password" class="w-full p-3 border-2 border-black rounded-xl">
-<button onclick="login()" class="w-full bg-black text-white p-3 mt-3 rounded-xl font-bold">LOGIN</button>
-<p class="text-xs mt-2">Default: kitab123 (Change in code)</p>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><script src="https://cdn.tailwindcss.com"></script><title>Admin - Kitab Bazaar</title></head>
+<body class="bg-gray-900 text-white p-4 max-w-6xl mx-auto min-h-screen">
+<div class="flex justify-between items-center">
+<h1 class="text-3xl font-black">🔒 ADMIN PANEL</h1>
+<a href="index.html" class="bg-white text-black px-4 py-2 rounded-full font-bold">View Site</a>
 </div>
-</div>
-
-<!-- Dashboard -->
-<div id="dashboard" class="hidden">
-<nav class="bg-black text-white p-4 flex justify-between">
-<h1 class="font-bold">📚 BOOK SHOP-ADMIN</h1>
-<button onclick="location.reload()" class="bg-red-500 px-3 py-1 rounded">Logout</button>
-</nav>
-
-<!-- Stats -->
-<div class="grid grid-cols-3 gap-4 p-4">
-<div class="bg-white p-4 rounded-xl border-2 border-black">
-<p class="text-sm">Total Books</p>
-<h2 id="totalBooks" class="text-3xl font-black">0</h2>
-</div>
-<div class="bg-yellow-400 p-4 rounded-xl border-2 border-black">
-<p class="text-sm">Total Earnings</p>
-<h2 id="earnings" class="text-3xl font-black">₹0</h2>
-<p class="text-xs">₹20 x Books Sold</p>
-</div>
-<div class="bg-green-400 p-4 rounded-xl border-2 border-black">
-<p class="text-sm">Books Sold</p>
-<h2 id="soldBooks" class="text-3xl font-black">0</h2>
-</div>
-</div>
-
-<!-- Controls -->
-<div class="p-4 flex gap-2">
-<input id="searchAdmin" onkeyup="searchAdmin()" placeholder="Search book to delete..." class="flex-1 p-3 rounded-xl border-2 border-black">
-<button onclick="loadBooks()" class="bg-black text-white px-6 rounded-xl">Refresh</button>
-</div>
-
-<!-- Books List -->
-<div id="adminBooks" class="p-4 grid md:grid-cols-2 gap-4"></div>
-</div>
+<p class="text-gray-400 text-sm mt-2">Project: book-shop-a1a26 | Total Books Below</p>
+<div id="books" class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6"><p>Loading...</p></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-import { getFirestore, collection, getDocs, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, deleteDoc, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
-const firebaseConfig = { apiKey: "YOUR_API_KEY", authDomain: "YOUR_PROJECT.firebaseapp.com", projectId: "YOUR_PROJECT" };
+const firebaseConfig = { 
+  apiKey: "AIzaSyAAL7vg4zzI6VPePYgjfDMxNQPCMPiA2vo", 
+  authDomain: "book-shop-a1a26.firebaseapp.com", 
+  projectId: "book-shop-a1a26", 
+  storageBucket: "book-shop-a1a26.firebasestorage.app", 
+  messagingSenderId: "368942909095", 
+  appId: "1:368942909095:web:cea46dfbd6b36ebdb0fd82" 
+};
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-let allBooksData = [];
-let allDocs = [];
-
-window.login = ()=>{
- if(document.getElementById("pass").value === "kitab123"){
-  document.getElementById("loginScreen").classList.add("hidden");
-  document.getElementById("dashboard").classList.remove("hidden");
-  loadBooks();
- } else { alert("Wrong Password!"); }
+async function load(){
+  const q = query(collection(db, "books"), orderBy("createdAt","desc"));
+  const snap = await getDocs(q);
+  let html=""; let count=0;
+  snap.forEach(d=>{
+    count++;
+    const b=d.data();
+    html+=`
+    <div class="bg-white text-black p-4 rounded-2xl shadow-lg">
+      <img src="${b.image}" class="h-40 w-full object-cover rounded-xl">
+      <p class="font-black mt-2">${b.name}</p>
+      <p class="text-sm">MRP ₹${b.mrp} | Sell ₹${b.price}</p>
+      <p class="text-xs bg-gray-100 p-2 rounded mt-2">📱 ${b.phone}</p>
+      <div class="flex gap-2 mt-3">
+        <a href="https://wa.me/91${b.phone}" target="_blank" class="flex-1 bg-green-500 text-white text-center py-2 rounded-lg font-bold text-sm">WhatsApp</a>
+        <button onclick="del('${d.id}')" class="flex-1 bg-red-500 text-white py-2 rounded-lg font-bold text-sm">DELETE</button>
+      </div>
+    </div>`;
+  });
+  document.getElementById("books").innerHTML = html || "<p class='text-white'>No books yet</p>";
+  if(count>0) document.querySelector("p.text-gray-400").innerText = `Project: book-shop-a1a26 | Total Books: ${count}`;
 }
 
-async function loadBooks(){
- const snap = await getDocs(collection(db, "books"));
- allBooksData = []; allDocs = [];
- snap.forEach(d=> { allBooksData.push({...d.data(), id: d.id}); allDocs.push(d); });
- 
- document.getElementById("totalBooks").innerText = allBooksData.length;
- document.getElementById("soldBooks").innerText = allBooksData.filter(b=> b.sold).length;
- document.getElementById("earnings").innerText = "₹" + (allBooksData.filter(b=> b.sold).length * 20);
- 
- showAdminBooks(allBooksData);
-}
-
-function showAdminBooks(list){
- document.getElementById("adminBooks").innerHTML = list.map(b=> `
-  <div class="bg-white p-3 rounded-xl border-2 border-black flex gap-3 ${b.sold ? 'opacity-50 bg-gray-100' : ''}">
-   <img src="${b.image}" class="w-20 h-20 object-cover rounded-lg">
-   <div class="flex-1">
-    <h3 class="font-bold">${b.name} ${b.sold ? '(SOLD)' : ''}</h3>
-    <p class="text-xs">₹${b.price} | ${b.branch} | 📞 ${b.phone}</p>
-    <div class="flex gap-2 mt-2">
-     <button onclick="markSold('${b.id}', ${!b.sold})" class="bg-green-500 text-white px-3 py-1 rounded text-xs">${b.sold ? 'Undo Sold' : 'Mark Sold'}</button>
-     <button onclick="deleteBook('${b.id}')" class="bg-red-500 text-white px-3 py-1 rounded text-xs">Delete</button>
-     <a href="https://wa.me/91${b.phone}" target="_blank" class="bg-black text-white px-3 py-1 rounded text-xs">WhatsApp</a>
-    </div>
-   </div>
-  </div>
- `).join('');
-}
-
-window.deleteBook = async (id)=>{
- if(confirm("Delete this book?")){
+window.del = async (id)=>{
+  if(!confirm("Delete this book permanently?")) return;
   await deleteDoc(doc(db, "books", id));
-  loadBooks();
- }
+  alert("Deleted ✅"); load();
 }
 
-window.markSold = async (id, soldStatus)=>{
- await updateDoc(doc(db, "books", id), { sold: soldStatus });
- loadBooks();
-}
-
-window.searchAdmin = ()=>{
- const q = document.getElementById("searchAdmin").value.toLowerCase();
- showAdminBooks(allBooksData.filter(b=> b.name.toLowerCase().includes(q) || b.phone.includes(q)));
-}
-
-window.loadBooks = loadBooks;
+load();
 </script>
-</body>
-</html>
+</body></html>
